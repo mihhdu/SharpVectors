@@ -331,10 +331,10 @@ namespace WpfW3cSvgTestSuite
 
             // Start with color of newer vesions
             Brush[] changedBrushes = {
+                Brushes.LightSalmon,
                 Brushes.LightSeaGreen,  // Version 1.2
                 Brushes.LightSkyBlue,   // Version 1.1
                 Brushes.LightPink,
-                Brushes.LightSalmon,
                 Brushes.LightSteelBlue,
                 Brushes.LightSkyBlue,
                 Brushes.LightSkyBlue
@@ -395,6 +395,14 @@ namespace WpfW3cSvgTestSuite
                 }
                 else
                 {
+                    if (IsNowDone(successValues, totalValue))
+                    {
+                        for (int i = 1; i < cellCount; i++)
+                        {
+                            resultRow.Cells[i].Background = Brushes.Silver;
+                        }
+                    }
+
                     if (resultCount > 1 )
                     {
                         int i = 0;
@@ -430,6 +438,20 @@ namespace WpfW3cSvgTestSuite
                 {
                     return false;
                 }
+            }
+            return true;
+        }
+
+        private static bool IsNowDone(int[] successValues, int totalValue)
+        {
+            if (successValues == null || successValues.Length == 0)
+            {
+                return false;
+            }
+            
+            if (successValues[successValues.Length - 1] != totalValue)
+            {
+                return false;
             }
             return true;
         }

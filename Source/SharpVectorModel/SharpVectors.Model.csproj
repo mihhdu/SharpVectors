@@ -115,10 +115,20 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Animations\SvgAnimateColorElement.cs" />
+    <Compile Include="Animations\SvgAnimateBaseElement.cs" />
+    <Compile Include="Animations\SvgAnimateElement.cs" />
+    <Compile Include="Animations\SvgAnimateMotionElement.cs" />
+    <Compile Include="Animations\SvgAnimateMPathElement.cs" />
+    <Compile Include="Animations\SvgAnimateSetElement.cs" />
+    <Compile Include="Animations\SvgAnimateTransformElement.cs" />
+    <Compile Include="Animations\SvgAnimationElement.cs" />
     <Compile Include="DocumentStructure\SvgAElement.cs" />
     <Compile Include="DocumentStructure\SvgColorProfileElement.cs" />
     <Compile Include="Events\SvgResolveNamespaceEventArgs.cs" />
     <Compile Include="Events\SvgResolveUriEventArgs.cs" />
+    <Compile Include="Paint\SvgMarkerPosition.cs" />
+    <Compile Include="Paths\SvgPathSegParser.cs" />
     <Compile Include="Properties\AssemblyInfo.cs">
       <SubType>Code</SubType>
     </Compile>
@@ -414,6 +424,16 @@
     <Compile Include="SvgExternalResourcesRequiredException.cs">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Text\SvgFontElement.cs" />
+    <Compile Include="Text\SvgFontFaceElement.cs" />
+    <Compile Include="Text\SvgFontFaceFormatElement.cs" />
+    <Compile Include="Text\SvgFontFaceNameElement.cs" />
+    <Compile Include="Text\SvgFontFaceSrcElement.cs" />
+    <Compile Include="Text\SvgFontFaceUriElement.cs" />
+    <Compile Include="Text\SvgGlyphElement.cs" />
+    <Compile Include="Text\SvgGlyphRefElement.cs" />
+    <Compile Include="Text\SvgHKernElement.cs" />
+    <Compile Include="Text\SvgMissingGlyphElement.cs" />
     <Compile Include="Text\SvgTextContentElement.cs">
       <SubType>Code</SubType>
     </Compile>
@@ -431,6 +451,7 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="DocumentStructure\SvgElementFactory.cs" />
+    <Compile Include="Text\SvgVKernElement.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Diagrams\SvgElements.cd" />

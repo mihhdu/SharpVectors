@@ -8,6 +8,7 @@ using System.ComponentModel;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Markup;
+using System.Windows.Controls;
 using System.Windows.Resources;
 
 using SharpVectors.Runtime;
@@ -27,6 +28,14 @@ namespace SharpVectors.Converters
     /// </remarks>
     public class SvgCanvas : SvgDrawingCanvas, IUriContext
     {
+        #region Public Fields
+
+        public static readonly DependencyProperty SourceProperty =
+            DependencyProperty.Register("Source", typeof(Uri), typeof(SvgCanvas),
+                new FrameworkPropertyMetadata(null, OnSourceChanged));
+
+        #endregion
+
         #region Private Fields
 
         private bool _isAutoSized;
@@ -56,6 +65,15 @@ namespace SharpVectors.Converters
             _optimizePath   = true;
         }
 
+        /// <summary>
+        /// Static constructor to define metadata for the control (and link it to the style in Generic.xaml).
+        /// </summary>
+        static SvgCanvas()
+        {
+            DefaultStyleKeyProperty.OverrideMetadata(typeof(SvgCanvas),
+                new FrameworkPropertyMetadata(typeof(SvgCanvas)));
+        }
+
         #endregion
 
         #region Public Properties
@@ -71,22 +89,12 @@ namespace SharpVectors.Converters
         /// </value>
         public Uri Source
         {
-            get
-            {
-                return _sourceUri;
+            get {
+                return (Uri)GetValue(SourceProperty);
             }
-            set
-            {
+            set {
                 _sourceUri = value;
-
-                if (_sourceUri == null)
-                {
-                    this.OnUnloadDiagram();
-                }
-                else
-                {
-                    this.OnSettingsChanged();
-                }
+                SetValue(SourceProperty, value);
             }
         }
 
@@ -103,12 +111,10 @@ namespace SharpVectors.Converters
         /// </value>
         public bool AutoSize
         {
-            get
-            {
+            get {
                 return _autoSize;
             }
-            set
-            {
+            set {
                 _autoSize = value;
 
                 this.OnAutoSizeChanged();
@@ -126,12 +132,10 @@ namespace SharpVectors.Converters
         /// </value>
         public bool OptimizePath
         {
-            get
-            {
+            get {
                 return _optimizePath;
             }
-            set
-            {
+            set {
                 _optimizePath = value;
 
                 this.OnSettingsChanged();
@@ -149,12 +153,10 @@ namespace SharpVectors.Converters
         /// </value>
         public bool TextAsGeometry
         {
-            get
-            {
+            get {
                 return _textAsGeometry;
             }
-            set
-            {
+            set {
                 _textAsGeometry = value;
 
                 this.OnSettingsChanged();
@@ -177,12 +179,10 @@ namespace SharpVectors.Converters
         /// </remarks>
         public bool IncludeRuntime
         {
-            get
-            {
+            get {
                 return _includeRuntime;
             }
-            set
-            {
+            set {
                 _includeRuntime = value;
 
                 this.OnSettingsChanged();
@@ -208,18 +208,29 @@ namespace SharpVectors.Converters
         /// </remarks>
         public CultureInfo CultureInfo
         {
-            get
-            {
+            get {
                 return _culture;
             }
-            set
-            {
+            set {
                 if (value != null)
                 {
                     _culture = value;
 
                     this.OnSettingsChanged();
                 }
+            }
+        }
+
+        /// <summary>
+        /// Gets the drawing from the SVG file conversion.
+        /// </summary>
+        /// <value>
+        /// An instance of the <see cref="DrawingGroup"/> specifying the converted drawings
+        /// which is rendered in this canvas.
+        public DrawingGroup Drawings
+        {
+            get {
+                return _svgDrawing;
             }
         }
 
@@ -256,7 +267,7 @@ namespace SharpVectors.Converters
         /// This handles changes in the rendering settings of this control.
         /// </summary>
         protected virtual void OnSettingsChanged()
-        {   
+        {
             if (!this.IsInitialized || _sourceUri == null)
             {
                 return;
@@ -273,7 +284,7 @@ namespace SharpVectors.Converters
         /// This handles changes in the automatic resizing property of this control.
         /// </summary>
         protected virtual void OnAutoSizeChanged()
-        {   
+        {
             if (_autoSize)
             {
                 if (this.IsInitialized && _svgDrawing != null)
@@ -281,8 +292,8 @@ namespace SharpVectors.Converters
                     Rect rectDrawing = _svgDrawing.Bounds;
                     if (!rectDrawing.IsEmpty)
                     {
-                        this.Width   = rectDrawing.Width;
-                        this.Height  = rectDrawing.Height;
+                        this.Width = rectDrawing.Width;
+                        this.Height = rectDrawing.Height;
 
                         _isAutoSized = true;
                     }
@@ -292,7 +303,7 @@ namespace SharpVectors.Converters
             {
                 if (_isAutoSized)
                 {
-                    this.Width  = Double.NaN;
+                    this.Width = Double.NaN;
                     this.Height = Double.NaN;
                 }
             }
@@ -328,7 +339,7 @@ namespace SharpVectors.Converters
                 WpfDrawingSettings settings = new WpfDrawingSettings();
                 settings.IncludeRuntime = _includeRuntime;
                 settings.TextAsGeometry = _textAsGeometry;
-                settings.OptimizePath   = _optimizePath;
+                settings.OptimizePath = _optimizePath;
                 if (_culture != null)
                 {
                     settings.CultureInfo = _culture;
@@ -357,8 +368,7 @@ namespace SharpVectors.Converters
                             svgStreamInfo = Application.GetResourceStream(svgSource);
                         }
 
-                        Stream svgStream = (svgStreamInfo != null) ?
-                            svgStreamInfo.Stream : null;
+                        Stream svgStream = (svgStreamInfo != null) ? svgStreamInfo.Stream : null;
 
                         if (svgStream != null)
                         {
@@ -374,8 +384,7 @@ namespace SharpVectors.Converters
                                     using (GZipStream zipStream =
                                         new GZipStream(svgStream, CompressionMode.Decompress))
                                     {
-                                        using (FileSvgReader reader =
-                                            new FileSvgReader(settings))
+                                        using (FileSvgReader reader = new FileSvgReader(settings))
                                         {
                                             drawing = reader.Read(zipStream);
                                         }
@@ -386,11 +395,35 @@ namespace SharpVectors.Converters
                             {
                                 using (svgStream)
                                 {
-                                    using (FileSvgReader reader =
-                                        new FileSvgReader(settings))
+                                    using (FileSvgReader reader = new FileSvgReader(settings))
                                     {
                                         drawing = reader.Read(svgStream);
                                     }
+                                }
+                            }
+                        }
+                        break;
+                    case "data":
+                        var sourceData = svgSource.OriginalString.Replace(" ", "");
+
+                        int nColon = sourceData.IndexOf(":", StringComparison.OrdinalIgnoreCase);
+                        int nSemiColon = sourceData.IndexOf(";", StringComparison.OrdinalIgnoreCase);
+                        int nComma = sourceData.IndexOf(",", StringComparison.OrdinalIgnoreCase);
+
+                        string sMimeType = sourceData.Substring(nColon + 1, nSemiColon - nColon - 1);
+                        string sEncoding = sourceData.Substring(nSemiColon + 1, nComma - nSemiColon - 1);
+
+                        if (string.Equals(sMimeType.Trim(), "image/svg+xml", StringComparison.OrdinalIgnoreCase)
+                            && string.Equals(sEncoding.Trim(), "base64", StringComparison.OrdinalIgnoreCase))
+                        {
+                            string sContent = SvgObject.RemoveWhitespace(sourceData.Substring(nComma + 1));
+                            byte[] imageBytes = Convert.FromBase64CharArray(sContent.ToCharArray(),
+                                0, sContent.Length);
+                            using (var stream = new MemoryStream(imageBytes))
+                            {
+                                using (var reader = new FileSvgReader(settings))
+                                {
+                                    drawing = reader.Read(stream);
                                 }
                             }
                         }
@@ -417,7 +450,7 @@ namespace SharpVectors.Converters
         #region Private Methods
 
         private void OnLoadDrawing(DrawingGroup drawing)
-        {   
+        {
             if (drawing == null)
             {
                 return;
@@ -438,7 +471,7 @@ namespace SharpVectors.Converters
 
             if (_isAutoSized)
             {
-                this.Width  = Double.NaN;
+                this.Width = Double.NaN;
                 this.Height = Double.NaN;
             }
         }
@@ -491,6 +524,25 @@ namespace SharpVectors.Converters
             }
         }
 
+        private static void OnSourceChanged(DependencyObject obj, DependencyPropertyChangedEventArgs args)
+        {
+            SvgCanvas viewbox = obj as SvgCanvas;
+            if (viewbox == null)
+            {
+                return;
+            }
+
+            viewbox._sourceUri = (Uri)args.NewValue;
+            if (viewbox._sourceUri == null)
+            {
+                viewbox.OnUnloadDiagram();
+            }
+            else
+            {
+                viewbox.OnSettingsChanged();
+            }
+        }
+
         #endregion
 
         #region IUriContext Members
@@ -503,12 +555,10 @@ namespace SharpVectors.Converters
         /// </value>
         public Uri BaseUri
         {
-            get
-            {
+            get {
                 return _baseUri;
             }
-            set
-            {
+            set {
                 _baseUri = value;
             }
         }

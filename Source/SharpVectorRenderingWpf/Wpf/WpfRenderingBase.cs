@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Windows;
-using System.Text.RegularExpressions;
 
 using SharpVectors.Dom.Svg;
 
@@ -9,26 +7,29 @@ namespace SharpVectors.Renderers.Wpf
     /// <summary>      
     /// Defines the interface required for a rendering node to interact with the renderer and the SVG DOM
     /// </summary>
-    public abstract class WpfRenderingBase : DependencyObject, IDisposable
+    /// <remarks>
+    /// Rename: WpfElementRenderer, WpfRenderingObject
+    /// </remarks>
+    public abstract class WpfRenderingBase : WpfRendererObject
     {
         #region Private Fields
 
         protected SvgElement _svgElement;
-
-        protected WpfDrawingContext _context;
+        protected WpfSvgPaintContext _paintContext;
 
         #endregion
 
         #region Constructors and Destructor
 
         protected WpfRenderingBase(SvgElement element)
+            : this(element, null)
         {
-            this._svgElement = element;
         }
 
-        ~WpfRenderingBase()
+        protected WpfRenderingBase(SvgElement element, WpfDrawingContext context)
+            : base(context)
         {
-            this.Dispose(false);
+            _svgElement = element;
         }
 
         #endregion
@@ -45,6 +46,13 @@ namespace SharpVectors.Renderers.Wpf
             get
             {
                 return false;
+            }
+        }
+
+        public WpfSvgPaintContext PaintContext
+        {
+            get {
+                return _paintContext;
             }
         }
 
@@ -70,106 +78,41 @@ namespace SharpVectors.Renderers.Wpf
                 return;
             }
             _context = renderer.Context;
+
+            if (_svgElement != null && _context != null)
+            {
+                _paintContext = new WpfSvgPaintContext(_svgElement.UniqueId);
+                _context.RegisterPaintContext(_paintContext);
+            }
         }
 
         public virtual void Render(WpfDrawingRenderer renderer) { }
-        public virtual void AfterRender(WpfDrawingRenderer renderer) { }
+
+        public virtual void AfterRender(WpfDrawingRenderer renderer)
+        {
+            if (_svgElement != null && _context != null)
+            {
+                _context.UnRegisterPaintContext(_svgElement.UniqueId);
+            }
+        }
 
         public string GetElementName()
         {
-            if (_svgElement == null)
-            {
-                return string.Empty;
-            }
-            if (_context != null && _context.IDVisitor != null)
-            {
-                return _context.IDVisitor.Visit(_svgElement, _context);
-            }
-            string elementId = _svgElement.Id;
-            if (string.IsNullOrWhiteSpace(elementId))
-            {
-                return string.Empty;
-            }
-            elementId = elementId.Trim();
-            if (IsValidIdentifier(elementId))
-            {
-                return elementId;
-            }
-
-            return Regex.Replace(elementId, @"[^[0-9a-zA-Z]]*", "_");
+            return GetElementName(_svgElement, _context);
         }
 
-        public static string GetElementName(SvgElement element, WpfDrawingContext context = null)
+        public string GetElementClass()
         {
-            if (element == null)
-            {
-                return string.Empty;
-            }
-            if (context != null && context.IDVisitor != null)
-            {
-                return context.IDVisitor.Visit(element, context);
-            }
-            string elementId = element.Id;
-            if (string.IsNullOrWhiteSpace(elementId))
-            {
-                return string.Empty;
-            }
-            elementId = elementId.Trim();
-            if (IsValidIdentifier(elementId))
-            {
-                return elementId;
-            }
-
-            return Regex.Replace(elementId, @"[^[0-9a-zA-Z]]*", "_");
-        }
-
-        public static bool IsValidIdentifier(string identifier)
-        {
-            if (string.IsNullOrWhiteSpace(identifier))
-            {
-                return false;
-            }
-
-            if (!IsIdentifierStart(identifier[0]))
-            {
-                return false;
-            }
-
-            for (int i = 1; i < identifier.Length; i++)
-            {
-                if (!IsIdentifierPart(identifier[i]))
-                {
-                    return false;
-                }
-            }
-
-            return true;
-        }
-
-
-        public static bool IsIdentifierStart(char c)
-        {
-            return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_' || char.IsLetter(c);
-        }
-
-        public static bool IsIdentifierPart(char c)
-        {
-            return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')
-                || c == '_' || (c >= '0' && c <= '9') || char.IsLetter(c);
+            return GetElementClassName(_svgElement, _context);
         }
 
         #endregion
 
         #region IDisposable Members
 
-        public void Dispose()
+        protected override void Dispose(bool disposing)
         {
-            this.Dispose(true);
-            GC.SuppressFinalize(this);
-        }
-
-        protected virtual void Dispose(bool disposing)
-        {
+            base.Dispose(disposing);
         }
 
         #endregion

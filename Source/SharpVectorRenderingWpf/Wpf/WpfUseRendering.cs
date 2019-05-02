@@ -1,9 +1,8 @@
 ﻿using System;
-using System.Xml;
-using System.Windows;
 using System.Windows.Media;
 
 using SharpVectors.Dom.Svg;
+using SharpVectors.Runtime;
 
 namespace SharpVectors.Renderers.Wpf
 {
@@ -35,96 +34,39 @@ namespace SharpVectors.Renderers.Wpf
             Geometry clipGeom   = this.ClipGeometry;
             Transform transform = this.Transform;
 
-            if (transform == null && 
-                (_svgElement.FirstChild != null && _svgElement.FirstChild == _svgElement.LastChild))
+            SvgUseElement useElement = (SvgUseElement)_svgElement;
+
+            string elementId = this.GetElementName();
+
+            float opacityValue = -1;
+
+            string opacity = useElement.GetAttribute("opacity");
+            if (string.IsNullOrWhiteSpace(opacity))
             {
-                try
-                {
-                    SvgUseElement useElement = (SvgUseElement)_svgElement;
-
-                    // If none of the following attribute exists, an exception is thrown...
-                    double x      = useElement.X.AnimVal.Value;
-                    double y      = useElement.Y.AnimVal.Value;
-                    double width  = useElement.Width.AnimVal.Value;
-                    double height = useElement.Height.AnimVal.Value;
-                    if (width > 0 && height > 0)
-                    {
-                        Rect elementBounds = new Rect(x, y, width, height);
-
-                        // Try handling the cases of "symbol" and "svg" sources within the "use"...
-                        XmlNode childNode = _svgElement.FirstChild;
-                        string childName  = childNode.Name;
-                        if (string.Equals(childName, "symbol", StringComparison.OrdinalIgnoreCase))
-                        {
-                            SvgSymbolElement symbolElement = (SvgSymbolElement)childNode;
-
-                            this.FitToViewbox(context, symbolElement, elementBounds);
-                        }
-                    }
-
-                    transform = this.Transform;
-                }
-                catch
-                {                   	
-                }
+                opacity = useElement.GetPropertyValue("opacity");
+            }
+            if (!string.IsNullOrWhiteSpace(opacity))
+            {
+                opacityValue = (float)SvgNumber.ParseNumber(opacity);
+                opacityValue = Math.Min(opacityValue, 1);
+                opacityValue = Math.Max(opacityValue, 0);
             }
 
-            if (transform != null)
+            _drawGroup = new DrawingGroup();
+
+            DrawingGroup currentGroup = context.Peek();
+
+            if (currentGroup == null)
             {
-                try
-                {
-                    SvgUseElement useElement = (SvgUseElement)_svgElement;
-
-                    // If none of the following attribute exists, an exception is thrown...
-                    double x = useElement.X.AnimVal.Value;
-                    double y = useElement.Y.AnimVal.Value;
-                    double width = useElement.Width.AnimVal.Value;
-                    double height = useElement.Height.AnimVal.Value;
-                    if (width > 0 && height > 0)
-                    {
-                        Rect elementBounds = new Rect(x, y, width, height);
-
-                        // Try handling the cases of "symbol" and "svg" sources within the "use"...
-                        XmlNode childNode = _svgElement.FirstChild;
-                        string childName = childNode.Name;
-                        if (string.Equals(childName, "symbol", StringComparison.OrdinalIgnoreCase))
-                        {
-                            SvgSymbolElement symbolElement = (SvgSymbolElement)childNode;
-
-                            this.FitToViewbox(context, symbolElement, elementBounds);
-                        }
-                    }
-
-                    Transform symbolTransform = this.Transform;
-                    if (symbolTransform != null && !symbolTransform.Value.IsIdentity)
-                    {
-                        TransformGroup combinedTransform = new TransformGroup();
-
-                        combinedTransform.Children.Add(transform);
-                        combinedTransform.Children.Add(symbolTransform);
-
-                        transform = combinedTransform;
-                    }
-                }
-                catch
-                {
-                }
+                throw new InvalidOperationException("An existing group is expected.");
             }
 
-            if (clipGeom != null || transform != null)
+            currentGroup.Children.Add(_drawGroup);
+            context.Push(_drawGroup);
+
+            if (clipGeom != null || transform != null || (opacityValue >= 0 && opacityValue < 1) ||
+                (!string.IsNullOrWhiteSpace(elementId) && !context.IsRegisteredId(elementId)))
             {
-                _drawGroup = new DrawingGroup();
-
-                DrawingGroup currentGroup = context.Peek();
-
-                if (currentGroup == null)
-                {
-                    throw new InvalidOperationException("An existing group is expected.");
-                }
-
-                currentGroup.Children.Add(_drawGroup);
-                context.Push(_drawGroup);
-
                 if (clipGeom != null)
                 {
                     _drawGroup.ClipGeometry = clipGeom;
@@ -133,6 +75,23 @@ namespace SharpVectors.Renderers.Wpf
                 if (transform != null)
                 {
                     _drawGroup.Transform = transform;
+                }
+
+                if (opacityValue >= 0 && opacityValue < 1)
+                {
+                    _drawGroup.Opacity = opacityValue;
+                }
+
+                if (!string.IsNullOrWhiteSpace(elementId) && !context.IsRegisteredId(elementId))
+                {
+                    SvgObject.SetName(_drawGroup, elementId);
+
+                    context.RegisterId(elementId);
+
+                    if (context.IncludeRuntime)
+                    {
+                        SvgObject.SetId(_drawGroup, elementId);
+                    }
                 }
             }
         }

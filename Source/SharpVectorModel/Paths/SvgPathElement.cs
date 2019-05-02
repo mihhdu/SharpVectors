@@ -10,7 +10,7 @@ namespace SharpVectors.Dom.Svg
         private ISvgAnimatedNumber _pathLength;
         private SvgTests _svgTests;
 
-        private ISvgPathSegList _pathSegList;
+        private SvgPathSegList _pathSegList;
 
         #endregion
 
@@ -91,6 +91,19 @@ namespace SharpVectors.Dom.Svg
 
         #endregion
 
+        #region Private Methods
+
+        private SvgPathSegList SegmentList()
+        {
+            if (_pathSegList == null)
+            {
+                _pathSegList = new SvgPathSegList(this.GetAttribute("d"), false);
+            }
+            return _pathSegList;
+        }
+
+        #endregion
+
         #region ISvgElement Members
 
         /// <summary>
@@ -114,18 +127,40 @@ namespace SharpVectors.Dom.Svg
         public SvgPointF[] MarkerPositions
         {
             get {
-                return ((SvgPathSegList)PathSegList).Points;
+                return this.SegmentList().Points;
+            }
+        }
+
+        public ISvgMarker GetMarker(int index)
+        {
+            var segmentList = this.SegmentList();
+            ISvgPathSeg segment = segmentList[index];
+
+            return new SvgMarker(index, segment);
+        }
+
+        public bool IsClosed
+        {
+            get {
+                return this.SegmentList().IsClosed;
+            }
+        }
+
+        public bool MayHaveCurves
+        {
+            get {
+                return this.SegmentList().MayHaveCurves;
             }
         }
 
         public double GetStartAngle(int index)
         {
-            return ((SvgPathSegList)PathSegList).GetStartAngle(index);
+            return this.SegmentList().GetStartAngle(index);
         }
 
         public double GetEndAngle(int index)
         {
-            return ((SvgPathSegList)PathSegList).GetEndAngle(index);
+            return this.SegmentList().GetEndAngle(index);
         }
 
         #endregion
@@ -142,11 +177,7 @@ namespace SharpVectors.Dom.Svg
         public ISvgPathSegList PathSegList
         {
             get {
-                if (_pathSegList == null)
-                {
-                    _pathSegList = new SvgPathSegList(this.GetAttribute("d"), false);
-                }
-                return _pathSegList;
+                return this.SegmentList();
             }
         }
 
@@ -170,7 +201,7 @@ namespace SharpVectors.Dom.Svg
             get {
                 if (_pathLength == null)
                 {
-                    _pathLength = new SvgAnimatedNumber(GetAttribute("pathLength"));
+                    _pathLength = new SvgAnimatedNumber(this.GetAttribute("pathLength"));
                 }
                 return _pathLength;
             }
@@ -178,7 +209,7 @@ namespace SharpVectors.Dom.Svg
 
         public double GetTotalLength()
         {
-            return ((SvgPathSegList)PathSegList).GetTotalLength();
+            return this.SegmentList().GetTotalLength();
         }
 
         public ISvgPoint GetPointAtLength(double distance)
@@ -186,10 +217,9 @@ namespace SharpVectors.Dom.Svg
             throw new NotImplementedException();
         }
 
-
         public int GetPathSegAtLength(double distance)
         {
-            return ((SvgPathSegList)PathSegList).GetPathSegAtLength(distance);
+            return this.SegmentList().GetPathSegAtLength(distance);
         }
 
         #region Create methods
@@ -302,6 +332,15 @@ namespace SharpVectors.Dom.Svg
         }
 
         #endregion
+
+        #endregion
+
+        #region Implementation of IElementVisitorTarget
+
+        public void Accept(IElementVisitor visitor)
+        {
+            visitor.Visit(this);
+        }
 
         #endregion
 

@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
 
-using System.Windows;
 using System.Windows.Media;
 
 using SharpVectors.Dom.Svg; 
@@ -38,7 +37,7 @@ namespace SharpVectors.Renderers.Wpf
             string elementId = this.GetElementName();
             if (!string.IsNullOrWhiteSpace(elementId) && !context.IsRegisteredId(elementId))
             {
-                _drawGroup.SetValue(FrameworkElement.NameProperty, elementId);
+                SvgObject.SetName(_drawGroup, elementId);
 
                 context.RegisterId(elementId);
 
@@ -46,6 +45,12 @@ namespace SharpVectors.Renderers.Wpf
                 {
                     SvgObject.SetId(_drawGroup, elementId);
                 }
+            }
+            
+            string elementClass = this.GetElementClass();
+            if (!string.IsNullOrWhiteSpace(elementClass) && context.IncludeRuntime)
+            {
+                SvgObject.SetClass(_drawGroup, elementClass);
             }
 
             DrawingGroup currentGroup = context.Peek();
@@ -83,14 +88,14 @@ namespace SharpVectors.Renderers.Wpf
                 {
                     opacity = element.GetPropertyValue("opacity");
                 }
-                if (opacity != null && opacity.Length > 0)
+                if (!string.IsNullOrWhiteSpace(opacity))
                 {
                     opacityValue = (float)SvgNumber.ParseNumber(opacity);
                     opacityValue = Math.Min(opacityValue, 1);
                     opacityValue = Math.Max(opacityValue, 0);
                 }
 
-                if (opacityValue >= 0)
+                if (opacityValue >= 0 && opacityValue < 1)
                 {
                     _drawGroup.Opacity = opacityValue;
                 }
@@ -124,7 +129,7 @@ namespace SharpVectors.Renderers.Wpf
 
             // If the group is empty, we simply remove it...
             if (_drawGroup.Children.Count == 0 && _drawGroup.ClipGeometry == null &&
-                _drawGroup.Transform == null)
+                _drawGroup.Transform == null && _drawGroup.Opacity.Equals(1.0))
             {
                 currentGroup = context.Peek();
                 if (currentGroup != null)

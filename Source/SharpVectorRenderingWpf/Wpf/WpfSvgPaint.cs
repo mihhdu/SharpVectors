@@ -1,4 +1,5 @@
 using System;
+using System.Xml;
 using System.Windows;
 using System.Windows.Media;
 
@@ -28,6 +29,11 @@ namespace SharpVectors.Renderers.Wpf
             _context      = context;
         }
 
+        private WpfSvgPaint(string str)
+            : base(str)
+        {
+        }
+
         #endregion
 
         #region Public Properties
@@ -37,6 +43,69 @@ namespace SharpVectors.Renderers.Wpf
             get
             {
                 return _paintFill;
+            }
+        }
+
+        public bool IsUserSpace
+        {
+            get {
+                if (_paintFill != null)
+                {
+                    return _paintFill.IsUserSpace;
+                }
+                return false;
+            }
+        }
+
+        public WpfFillType FillType
+        {
+            get {
+                if (_paintFill != null)
+                {
+                    return _paintFill.FillType;
+                }
+                return WpfFillType.None;
+            }
+        }
+
+        public bool IsFillTransformable
+        {
+            get {
+                if (_paintFill != null)
+                {
+                    if (_paintFill.FillType == WpfFillType.Gradient)
+                    {
+                        if (!_paintFill.IsUserSpace)
+                        {
+                            return false;
+                        }
+                    }
+                    if (_paintFill.FillType == WpfFillType.Pattern)
+                    {
+                        if (!_paintFill.IsUserSpace)
+                        {
+                            return false;
+                        }
+                    }
+                }
+                return true;
+            }
+        }
+
+        public WpfSvgPaint WpfFallback
+        {
+            get {
+                if (this.Fallback != null)
+                {
+                    WpfSvgPaint fallbackPaint = new WpfSvgPaint(this.Fallback.CssText);
+                    fallbackPaint._propertyName = this._propertyName;
+                    fallbackPaint._element = this._element;
+                    fallbackPaint._context = this._context;
+
+                    return fallbackPaint;
+                }
+
+                return null;
             }
         }
 
@@ -64,32 +133,60 @@ namespace SharpVectors.Renderers.Wpf
             return GetBrush(geometry, "fill", setOpacity);
         }
 
-        public Pen GetPen()
+        public Pen GetPen(bool setOpacity = true)
         {
-            return this.GetPen(null);
+            return this.GetPen(null, setOpacity);
         }
 
-        public Pen GetPen(Geometry geometry)
+        public Pen GetPen(Geometry geometry, bool setOpacity = true)
         {
             double strokeWidth = GetStrokeWidth();
             if (strokeWidth.Equals(0.0d)) 
                 return null;
 
+            WpfSvgPaintContext paintContext = null;
+
+            SvgPaintType paintType = this.PaintType;
+
             WpfSvgPaint stroke;
-            if (PaintType == SvgPaintType.None)
+            if (paintType == SvgPaintType.None)
             {
                 return null;
             }
-            if (PaintType == SvgPaintType.CurrentColor)
+            if (paintType == SvgPaintType.CurrentColor)
             {
                 stroke = new WpfSvgPaint(_context, _element, "color");
+            }
+            else if (paintType == SvgPaintType.ContextFill)
+            {
+                paintContext = GetFillContext();
+                if (paintContext != null)
+                {
+                    stroke = paintContext.Fill;
+                }
+                else
+                {
+                    stroke = this;
+                }
+            }
+            else if (paintType == SvgPaintType.ContextStroke)
+            {
+                paintContext = GetStrokeContext();
+                if (paintContext != null)
+                {
+                    stroke = paintContext.Stroke;
+                }
+                else
+                {
+                    stroke = this;
+                }
             }
             else
             {
                 stroke = this;
             }
 
-            Pen pen = new Pen(stroke.GetBrush(geometry, "stroke", true), strokeWidth);
+            Pen pen = new Pen(stroke.GetBrush(geometry, "stroke", setOpacity), strokeWidth);
 
             pen.StartLineCap  = pen.EndLineCap = GetLineCap();
             pen.LineJoin      = GetLineJoin();
@@ -127,22 +224,88 @@ namespace SharpVectors.Renderers.Wpf
             return pen;
         }
 
+        public WpfSvgPaint GetScopeStroke()
+        {
+            WpfSvgPaintContext paintContext = this.GetStrokeContext();
+            if (paintContext != null)
+            {
+                return paintContext.Stroke;
+            }
+            return null;
+        }
+
         #endregion
 
         #region Private Methods
+
+        private WpfSvgPaintContext GetFillContext()
+        {
+            WpfSvgPaintContext paintContext = null;
+            if (_element != null && _context != null)
+            {
+                SvgElement element = _element;
+                paintContext = _context.GetPaintContext(element.UniqueId);
+                while (element != null && (paintContext != null && paintContext.Fill == null))
+                {
+                    element = element.ParentNode as SvgElement;
+                    paintContext = null;
+                    if (element != null)
+                    {
+                        paintContext = _context.GetPaintContext(element.UniqueId);
+
+                        if (paintContext != null && paintContext.HasTarget)
+                        {
+                            if (paintContext.Fill == null)
+                            {
+                                paintContext = _context.GetPaintContext(paintContext.TargetId);
+                            }
+                        }
+                    }
+                }
+            }
+            return paintContext;
+        }
+
+        private WpfSvgPaintContext GetStrokeContext()
+        {
+            WpfSvgPaintContext paintContext = null;
+            if (_element != null && _context != null)
+            {
+                SvgElement element = _element;
+                paintContext = _context.GetPaintContext(element.UniqueId);
+                while (element != null && (paintContext != null && paintContext.Stroke == null))
+                {
+                    element = element.ParentNode as SvgElement;
+                    paintContext = null;
+                    if (element != null)
+                    {
+                        paintContext = _context.GetPaintContext(element.UniqueId);
+
+                        if (paintContext != null && paintContext.HasTarget)
+                        {
+                            if (paintContext.Stroke == null)
+                            {
+                                paintContext = _context.GetPaintContext(paintContext.TargetId);
+                            }
+                        }
+                    }
+                }
+            }
+            return paintContext;
+        }
 
         private double GetOpacity(string fillOrStroke)
         {
             double opacityValue = 1;
 
             string opacity = _element.GetPropertyValue(fillOrStroke + "-opacity");
-            if (opacity != null && opacity.Length > 0)
+            if (!string.IsNullOrWhiteSpace(opacity))
             {
                 opacityValue *= SvgNumber.ParseNumber(opacity);
             }
 
             opacity = _element.GetPropertyValue("opacity");
-            if (opacity != null && opacity.Length > 0)
+            if (!string.IsNullOrWhiteSpace(opacity))
             {
                 opacityValue *= SvgNumber.ParseNumber(opacity);
             }
@@ -284,18 +447,15 @@ namespace SharpVectors.Renderers.Wpf
                     SvgLengthDirection.Viewport, dashOffset);
                 return dashOffsetLength.Value;
             }
-            else
-            {
-                return 0;
-            }
+
+            return 0;
         }
 
         private WpfFill GetPaintFill(string uri)
         {
             string absoluteUri = _element.ResolveUri(uri);
 
-            if (_element.Imported && _element.ImportDocument != null && 
-                _element.ImportNode != null)
+            if (_element.Imported && _element.ImportDocument != null && _element.ImportNode != null)
             {
                 // We need to determine whether the provided URI refers to element in the
                 // original document or in the current document...
@@ -322,26 +482,109 @@ namespace SharpVectors.Renderers.Wpf
             return WpfFill.CreateFill(_element.OwnerDocument, absoluteUri);
         }
 
-        private Brush GetBrush(Geometry geometry, string propPrefix, bool setOpacity)
+        private WpfSvgPaint GetDeferredFill()
         {
-            SvgPaint fill;
-            if (PaintType == SvgPaintType.None)
+            var nodeList = _element.OwnerDocument.SelectNodes("//*[@fill='currentColor']");
+            if (nodeList == null || nodeList.Count == 0)
             {
                 return null;
             }
-            if (PaintType == SvgPaintType.CurrentColor)
+            // Try a shortcut...
+            SvgStyleableElement svgElement = _element.ParentNode as SvgStyleableElement;
+            if (svgElement != null && svgElement.HasAttribute("fill")
+                && string.Equals("currentColor", svgElement.GetAttribute("fill")))
             {
-                fill = new WpfSvgPaint(_context, _element, "color");
+                string color = svgElement.GetAttribute("color");
+                if (!string.IsNullOrWhiteSpace(color))
+                {
+                    return new WpfSvgPaint(_context, svgElement, "color");
+                }
+            }
+
+            foreach (XmlNode nodeItem in nodeList)
+            {
+                svgElement = nodeItem as SvgStyleableElement;
+                if (svgElement == null)
+                {
+                    continue;
+                }
+
+                var childNodeList = svgElement.GetElementsByTagName(_element.LocalName);
+                if (childNodeList != null && childNodeList.Count != 0)
+                {
+                    foreach (var childNode in childNodeList)
+                    {
+                        if (childNode == _element)
+                        {
+                            string color = svgElement.GetAttribute("color");
+                            if (!string.IsNullOrWhiteSpace(color))
+                            {
+                                return new WpfSvgPaint(_context, svgElement, "color");
+                            }
+                       }
+                    }
+                }
+            }
+            return null;
+        }
+
+        private Brush GetBrush(Geometry geometry, string propPrefix, bool setOpacity)
+        {
+            WpfSvgPaintContext paintContext = null;
+
+            SvgPaintType paintType = this.PaintType;
+
+            SvgPaint fill;
+            if (paintType == SvgPaintType.None)
+            {
+                return null;
+            }
+            if (paintType == SvgPaintType.CurrentColor)
+            {
+                //TODO: Find a better way to support currentColor specified on parent element.
+                var deferredFill = this.GetDeferredFill();
+                if (deferredFill == null)
+                {
+                    fill = new WpfSvgPaint(_context, _element, "color");
+                }
+                else
+                {
+                    fill = deferredFill;
+                }
+            }
+            else if (paintType == SvgPaintType.ContextFill)
+            {
+                paintContext = GetFillContext();
+                if (paintContext != null)
+                {
+                    fill = paintContext.Fill;
+                }
+                else
+                {
+                    fill = this;
+                }
+            }
+            else if (paintType == SvgPaintType.ContextStroke)
+            {
+                paintContext = GetStrokeContext();
+                if (paintContext != null)
+                {
+                    fill = paintContext.Stroke;
+                }
+                else
+                {
+                    fill = this;
+                }
             }
             else
             {
                 fill = this;
             }
 
-            SvgPaintType paintType = fill.PaintType;
-            if (paintType == SvgPaintType.Uri     || paintType == SvgPaintType.UriCurrentColor ||
-                paintType == SvgPaintType.UriNone || paintType == SvgPaintType.UriRgbColor     ||
-                paintType == SvgPaintType.UriRgbColorIccColor)
+            SvgPaintType fillType = fill.PaintType;
+            if (fillType == SvgPaintType.Uri     || fillType == SvgPaintType.UriCurrentColor ||
+                fillType == SvgPaintType.UriNone || fillType == SvgPaintType.UriRgbColor     ||
+                fillType == SvgPaintType.UriRgbColorIccColor)
             {
                 _paintFill = GetPaintFill(fill.Uri);
                 if (_paintFill != null)
@@ -365,11 +608,11 @@ namespace SharpVectors.Renderers.Wpf
                 }
                 else
                 {
-                    if (PaintType == SvgPaintType.UriNone || PaintType == SvgPaintType.Uri)
+                    if (paintType == SvgPaintType.UriNone || paintType == SvgPaintType.Uri)
                     {
                         return null;
                     }
-                    if (PaintType == SvgPaintType.UriCurrentColor)
+                    if (paintType == SvgPaintType.UriCurrentColor)
                     {
                         fill = new WpfSvgPaint(_context, _element, "color");
                     }

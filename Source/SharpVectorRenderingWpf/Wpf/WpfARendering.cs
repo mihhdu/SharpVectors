@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Windows;
 using System.Windows.Media;
 
 using SharpVectors.Dom.Svg;
@@ -93,7 +92,7 @@ namespace SharpVectors.Renderers.Wpf
             {
                 opacity = element.GetPropertyValue("opacity");
             }
-            if (opacity != null && opacity.Length > 0)
+            if (!string.IsNullOrWhiteSpace(opacity))
             {
                 opacityValue = (float)SvgNumber.ParseNumber(opacity);
                 opacityValue = Math.Min(opacityValue, 1);
@@ -102,14 +101,14 @@ namespace SharpVectors.Renderers.Wpf
 
             WpfLinkVisitor linkVisitor = context.LinkVisitor;
 
-            if (linkVisitor != null || clipGeom != null || transform != null || opacityValue >= 0)
+            if (linkVisitor != null || clipGeom != null || transform != null || (opacityValue >= 0 && opacityValue < 1))
             {
                 _drawGroup = new DrawingGroup();
 
                 string elementId = this.GetElementName();
                 if (!string.IsNullOrWhiteSpace(elementId) && !context.IsRegisteredId(elementId))
                 {
-                    _drawGroup.SetValue(FrameworkElement.NameProperty, elementId);
+                    SvgObject.SetName(_drawGroup, elementId);
 
                     context.RegisterId(elementId);
 
@@ -117,6 +116,12 @@ namespace SharpVectors.Renderers.Wpf
                     {
                         SvgObject.SetId(_drawGroup, elementId);
                     }
+                }
+
+                string elementClass = this.GetElementClass();
+                if (!string.IsNullOrWhiteSpace(elementClass) && context.IncludeRuntime)
+                {
+                    SvgObject.SetClass(_drawGroup, elementClass);
                 }
 
                 DrawingGroup currentGroup = context.Peek();
@@ -150,7 +155,7 @@ namespace SharpVectors.Renderers.Wpf
                     _drawGroup.Transform = transform;
                 }
 
-                if (opacityValue >= 0)
+                if ((opacityValue >= 0 && opacityValue < 1))
                 {
                     _drawGroup.Opacity = opacityValue;
                 }

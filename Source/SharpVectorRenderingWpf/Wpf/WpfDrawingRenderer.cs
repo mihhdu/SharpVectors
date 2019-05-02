@@ -1,13 +1,17 @@
 ﻿using System;
-using System.Windows;
 using System.Windows.Media;
 
 using SharpVectors.Dom.Svg;
 
 namespace SharpVectors.Renderers.Wpf
 {
-    public sealed class WpfDrawingRenderer : DependencyObject, 
-        ISvgRenderer, IDisposable
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <remarks>
+    /// Rename: WpfRendererSession
+    /// </remarks>
+    public sealed class WpfDrawingRenderer : WpfRendererObject, ISvgRenderer
     {
         #region Private Fields
 
@@ -16,8 +20,7 @@ namespace SharpVectors.Renderers.Wpf
         /// </summary>
         private ISvgWindow              _svgWindow;
 
-        private WpfDrawingContext       _renderingContext;
-        private WpfDrawingSettings      _renderingSettings;
+        private WpfDrawingSettings      _settings;
 
         private WpfRenderingHelper      _svgRenderer;
  
@@ -36,37 +39,24 @@ namespace SharpVectors.Renderers.Wpf
 
         public WpfDrawingRenderer(WpfDrawingSettings settings)
         {
-            _svgRenderer       = new WpfRenderingHelper(this);
-            _renderingSettings = settings;
-        }
-
-        ~WpfDrawingRenderer()
-        {
-            this.Dispose(false);
+            _svgRenderer = new WpfRenderingHelper(this);
+            _settings   = settings;
         }
 
         #endregion
 
         #region Public Properties
 
-        public Drawing Drawing
+        public DrawingGroup Drawing
         {
             get
             {
-                if (_renderingContext == null)
+                if (_context == null)
                 {
                     return null;
                 }
 
-                return _renderingContext.Root;
-            }
-        }
-
-        public WpfDrawingContext Context
-        {
-            get
-            {
-                return _renderingContext;
+                return _context.Root;
             }
         }
 
@@ -145,16 +135,15 @@ namespace SharpVectors.Renderers.Wpf
             //if (onRender != null)
             //    OnRender(updatedRect);
 
-            _renderingContext = new WpfDrawingContext(true,
-                _renderingSettings);
+            _context = new WpfDrawingContext(true, _settings);
 
-            _renderingContext.Initialize(null, _fontFamilyVisitor, _imageVisitor);
+            _context.Initialize(null, _fontFamilyVisitor, _imageVisitor);
 
-            _renderingContext.BeginDrawing();
+            _context.BeginDrawing();
 
             _svgRenderer.Render(node);
 
-            _renderingContext.EndDrawing();
+            _context.EndDrawing();
         }
 
         public void Render(ISvgElement node, WpfDrawingContext context)
@@ -182,21 +171,20 @@ namespace SharpVectors.Renderers.Wpf
 
             if (context == null)
             {
-                _renderingContext = new WpfDrawingContext(true,
-                    _renderingSettings);
+                _context = new WpfDrawingContext(true, _settings);
 
-                _renderingContext.Initialize(null, _fontFamilyVisitor, _imageVisitor);
+                _context.Initialize(null, _fontFamilyVisitor, _imageVisitor);
             }
             else
             {
-                _renderingContext = context;
+                _context = context;
             }
 
-            _renderingContext.BeginDrawing();
+            _context.BeginDrawing();
 
             _svgRenderer.Render(node);
 
-            _renderingContext.EndDrawing();
+            _context.EndDrawing();
         }
 
         public void Render(ISvgDocument node)
@@ -211,16 +199,15 @@ namespace SharpVectors.Renderers.Wpf
             //RendererBeforeRender();
 
             //_renderingContext = new WpfDrawingContext(new DrawingGroup());
-            _renderingContext = new WpfDrawingContext(false,
-                _renderingSettings);
+            _context = new WpfDrawingContext(false, _settings);
 
-            _renderingContext.Initialize(_linkVisitor, _fontFamilyVisitor, _imageVisitor);
+            _context.Initialize(_linkVisitor, _fontFamilyVisitor, _imageVisitor);
 
-            _renderingContext.BeginDrawing();
+            _context.BeginDrawing();
 
             _svgRenderer.Render(node);
 
-            _renderingContext.EndDrawing();
+            _context.EndDrawing();
 
             //RendererAfterRender();
 
@@ -248,21 +235,20 @@ namespace SharpVectors.Renderers.Wpf
         {
             if (context == null)
             {
-                _renderingContext = new WpfDrawingContext(true,
-                    _renderingSettings);
+                _context = new WpfDrawingContext(true, _settings);
 
-                _renderingContext.Initialize(null, _fontFamilyVisitor, _imageVisitor);
+                _context.Initialize(null, _fontFamilyVisitor, _imageVisitor);
             }
             else
             {
-                _renderingContext = context;
+                _context = context;
             }
 
-            _renderingContext.BeginDrawing();
+            _context.BeginDrawing();
 
             _svgRenderer.RenderMask(node);
 
-            _renderingContext.EndDrawing();
+            _context.EndDrawing();
         }
 
         public void InvalidateRect(SvgRectF rect)
@@ -289,14 +275,9 @@ namespace SharpVectors.Renderers.Wpf
 
         #region IDisposable Members
 
-        public void Dispose()
+        protected override void Dispose(bool disposing)
         {
-            this.Dispose(true);
-            GC.SuppressFinalize(this);
-        }
-
-        private void Dispose(bool disposing)
-        {
+            base.Dispose(disposing);
         }
 
         #endregion

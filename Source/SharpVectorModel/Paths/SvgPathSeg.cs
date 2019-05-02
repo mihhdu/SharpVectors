@@ -10,6 +10,8 @@ namespace SharpVectors.Dom.Svg
         private SvgPathSegList _list;
         private SvgPathSegType _type;
 
+        private SvgPointF[] _limits;
+
         #endregion
 
         #region Constructors
@@ -27,6 +29,16 @@ namespace SharpVectors.Dom.Svg
         public abstract SvgPointF AbsXY { get; }
         public abstract double StartAngle { get; }
         public abstract double EndAngle { get; }
+
+        public SvgPointF[] Limits
+        {
+            get {
+                return _limits;
+            }
+            set {
+                _limits = value;
+            }
+        }
 
         public SvgPathSeg PreviousSeg
         {
@@ -53,6 +65,56 @@ namespace SharpVectors.Dom.Svg
         {
             get {
                 return 0;
+            }
+        }
+
+        public bool IsCurve
+        {
+            get {
+                switch (this.PathSegType)
+                {
+                    case SvgPathSegType.ArcAbs:
+                        return true;
+                    case SvgPathSegType.ArcRel:
+                        return true;
+                    case SvgPathSegType.ClosePath:
+                        return true;
+                    case SvgPathSegType.CurveToCubicAbs:
+                        return true;
+                    case SvgPathSegType.CurveToCubicRel:
+                        return true;
+                    case SvgPathSegType.CurveToCubicSmoothAbs:
+                        return true;
+                    case SvgPathSegType.CurveToCubicSmoothRel:
+                        return true;
+                    case SvgPathSegType.CurveToQuadraticAbs:
+                        return true;
+                    case SvgPathSegType.CurveToQuadraticRel:
+                        return true;
+                    case SvgPathSegType.CurveToQuadraticSmoothAbs:
+                        return true;
+                    case SvgPathSegType.CurveToQuadraticSmoothRel:
+                        return true;
+
+                    case SvgPathSegType.LineToAbs:
+                        return false;
+                    case SvgPathSegType.LineToHorizontalAbs:
+                        return false;
+                    case SvgPathSegType.LineToHorizontalRel:
+                        return false;
+                    case SvgPathSegType.LineToRel:
+                        return false;
+                    case SvgPathSegType.LineToVerticalAbs:
+                        return false;
+                    case SvgPathSegType.LineToVerticalRel:
+                        return false;
+                    case SvgPathSegType.MoveToAbs:
+                        return false;
+                    case SvgPathSegType.MoveToRel:
+                        return false;
+                    default:
+                        return false;
+                }
             }
         }
 
@@ -132,6 +194,20 @@ namespace SharpVectors.Dom.Svg
                     default:
                         return string.Empty;
                 }
+            }
+        }
+
+        ISvgPathSeg ISvgPathSeg.PreviousSeg
+        {
+            get {
+                return this.PreviousSeg;
+            }
+        }
+
+        ISvgPathSeg ISvgPathSeg.NextSeg
+        {
+            get {
+                return this.NextSeg;
             }
         }
 

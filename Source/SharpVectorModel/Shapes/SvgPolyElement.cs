@@ -149,8 +149,12 @@ namespace SharpVectors.Dom.Svg
         public double GetStartAngle(int index)
         {
             index--;
+            if (index < 0)
+            {
+                index = 1;
+            }
 
-            SvgPointF[] positions = MarkerPositions;
+            SvgPointF[] positions = this.MarkerPositions;
 
             if (index > positions.Length - 1)
             {
@@ -175,6 +179,25 @@ namespace SharpVectors.Dom.Svg
             a += 180;
             a %= 360;
             return a;
+        }
+
+        public ISvgMarker GetMarker(int index)
+        {
+            return new SvgMarker(index, this.MarkerPositions[index]);
+        }
+
+        public virtual bool IsClosed
+        {
+            get {
+                return false;
+            }
+        }
+
+        public bool MayHaveCurves
+        {
+            get {
+                return false;
+            }
         }
 
         #endregion

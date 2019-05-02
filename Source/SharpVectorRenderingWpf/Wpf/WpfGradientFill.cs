@@ -5,7 +5,6 @@ using System.Windows.Media;
 
 using SharpVectors.Dom.Svg;
 using SharpVectors.Renderers.Utils;
-using SharpVectors.Runtime;
 
 namespace SharpVectors.Renderers.Wpf
 {
@@ -13,6 +12,7 @@ namespace SharpVectors.Renderers.Wpf
     {
         #region Private Fields
 
+        private bool _isUserSpace;
         private SvgGradientElement _gradientElement;
 
         #endregion
@@ -21,7 +21,26 @@ namespace SharpVectors.Renderers.Wpf
 
         public WpfGradientFill(SvgGradientElement gradientElement)
         {
+            _isUserSpace     = false;
             _gradientElement = gradientElement;
+        }
+
+        #endregion
+
+        #region Public Properties
+
+        public override bool IsUserSpace
+        {
+            get {
+                return _isUserSpace;
+            }
+        }
+
+        public override WpfFillType FillType
+        {
+            get {
+                return WpfFillType.Gradient;
+            }
         }
 
         #endregion
@@ -87,6 +106,8 @@ namespace SharpVectors.Renderers.Wpf
                 else if (mappingMode == SvgUnitType.UserSpaceOnUse)
                 {
                     brush.MappingMode = BrushMappingMode.Absolute;
+
+                    _isUserSpace = true;
 
                     //if (viewBoxTransform == null || viewBoxTransform.Value.IsIdentity)
                     //{
@@ -265,6 +286,8 @@ namespace SharpVectors.Renderers.Wpf
                     {
                         brush.GradientOrigin = brush.Center;
                     }
+
+                    _isUserSpace = true;
                 }
             }
 
@@ -314,7 +337,7 @@ namespace SharpVectors.Renderers.Wpf
             for (int i = 0; i < itemCount; i++)
             {
                 SvgStopElement stop = (SvgStopElement)stops.Item(i);
-                if (stop == null || stop.Offset == null)
+                if (stop == null)
                 {
                     continue;
                 }
@@ -337,8 +360,10 @@ namespace SharpVectors.Renderers.Wpf
                     {
                         opacity = stop.GetPropertyValue("stop-opacity");
                     }
-                    if (opacity != null && opacity.Length > 0)
+                    if (!string.IsNullOrWhiteSpace(opacity))
+                    {
                         alpha *= SvgNumber.ParseNumber(opacity);
+                    }
 
                     alpha = Math.Min(alpha, 255);
                     alpha = Math.Max(alpha, 0);
@@ -346,7 +371,7 @@ namespace SharpVectors.Renderers.Wpf
                     color = Color.FromArgb((byte)Convert.ToInt32(alpha), color.R, color.G, color.B);
                 }
 
-                double offset = stop.Offset.AnimVal;
+                double offset = (stop.Offset == null) ? 0 : stop.Offset.AnimVal;
 
                 offset /= 100;
                 offset = Math.Max(lastOffset, offset);
@@ -500,9 +525,7 @@ namespace SharpVectors.Renderers.Wpf
             }
 
             return new double[]{ translateX, translateY, scaleX, scaleY };
-        }
-
-        
+        }        
 
         #endregion
     }

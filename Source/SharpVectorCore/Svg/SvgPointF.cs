@@ -20,7 +20,7 @@ namespace SharpVectors.Dom.Svg
 
         private double _x;
         private double _y;
-        private bool   _notEmpty;
+        private bool _notEmpty;
 
         #endregion
 
@@ -34,8 +34,8 @@ namespace SharpVectors.Dom.Svg
         /// <param name="y">The y-coordinate of the point. </param>
         public SvgPointF(float x, float y)
         {
-            _x        = x;
-            _y        = y;
+            _x = x;
+            _y = y;
             _notEmpty = true;
         }
 
@@ -47,8 +47,8 @@ namespace SharpVectors.Dom.Svg
         /// <param name="y">The y-coordinate of the point. </param>
         public SvgPointF(double x, double y)
         {
-            _x        = x;
-            _y        = y;
+            _x = x;
+            _y = y;
             _notEmpty = true;
         }
 
@@ -65,8 +65,7 @@ namespace SharpVectors.Dom.Svg
         /// </value>
         public bool IsEmpty
         {
-            get
-            {
+            get {
                 return !_notEmpty;
             }
         }
@@ -79,8 +78,7 @@ namespace SharpVectors.Dom.Svg
         /// </value>
         public float X
         {
-            get
-            {
+            get {
                 return (float)_x;
             }
         }
@@ -93,8 +91,7 @@ namespace SharpVectors.Dom.Svg
         /// </value>
         public float Y
         {
-            get
-            {
+            get {
                 return (float)_y;
             }
         }
@@ -107,13 +104,11 @@ namespace SharpVectors.Dom.Svg
         /// </value>
         public double ValueX
         {
-            get
-            {
+            get {
                 return _x;
             }
-            set
-            {
-                _x        = value;
+            set {
+                _x = value;
                 _notEmpty = true;
             }
         }
@@ -126,13 +121,11 @@ namespace SharpVectors.Dom.Svg
         /// </value>
         public double ValueY
         {
-            get
-            {
+            get {
                 return _y;
             }
-            set
-            {
-                _y        = value;
+            set {
+                _y = value;
                 _notEmpty = true;
             }
         }
@@ -264,11 +257,10 @@ namespace SharpVectors.Dom.Svg
         /// </returns>
         public bool Equals(SvgPointF other)
         {
-            if ((other.X == this.X) && (other.Y == this.Y))
+            if (other.X.Equals(this.X) && other.Y.Equals(this.Y))
             {
                 return other.GetType().Equals(base.GetType());
             }
-
             return false;
         }
 
@@ -281,7 +273,7 @@ namespace SharpVectors.Dom.Svg
         /// </returns>
         public override int GetHashCode()
         {
-            return (_x.GetHashCode() ^ _y.GetHashCode());
+            return X.GetHashCode() ^ Y.GetHashCode();
         }
 
         /// <summary>
@@ -292,8 +284,8 @@ namespace SharpVectors.Dom.Svg
         /// </returns>
         public override string ToString()
         {
-            return string.Format(CultureInfo.CurrentCulture, 
-                "{{X={0}, Y={1}}",  _x, _y);
+            return string.Format(CultureInfo.InvariantCulture,
+                "{{X={0}, Y={1}}", _x, _y);
         }
 
         #endregion

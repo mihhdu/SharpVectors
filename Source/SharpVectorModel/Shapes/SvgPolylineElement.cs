@@ -10,5 +10,21 @@ namespace SharpVectors.Dom.Svg
 			: base(prefix, localname, ns, doc)
 		{		
 		}
-	}
+
+        public override bool IsClosed
+        {
+            get {
+                return false;
+            }
+        }
+
+        #region IElementVisitorTarget Members
+
+        public void Accept(IElementVisitor visitor)
+        {
+            visitor.Visit(this);
+        }
+
+        #endregion
+    }
 }

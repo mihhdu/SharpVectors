@@ -114,16 +114,16 @@ namespace SharpVectors.Renderers.Wpf
 
         public override void BeforeRender(WpfDrawingRenderer renderer)
         {
+            base.BeforeRender(renderer);
+
+            _maskUnits        = SvgUnitType.UserSpaceOnUse;
+            _clipPathUnits    = SvgUnitType.UserSpaceOnUse;
+            _maskContentUnits = SvgUnitType.UserSpaceOnUse;
+
             if (renderer == null)
             {
                 return;
             }
-
-            base.BeforeRender(renderer);
-
-            _maskUnits = SvgUnitType.UserSpaceOnUse;
-            _clipPathUnits = SvgUnitType.UserSpaceOnUse;
-            _maskContentUnits = SvgUnitType.UserSpaceOnUse;
 
             WpfDrawingContext context = renderer.Context;
 
@@ -137,12 +137,12 @@ namespace SharpVectors.Renderers.Wpf
         {
             base.AfterRender(renderer);
 
-            _clipGeometry = null;
-            _transformMatrix = null;
-            _maskBrush = null;
+            _clipGeometry     = null;
+            _transformMatrix  = null;
+            _maskBrush        = null;
 
-            _maskUnits = SvgUnitType.UserSpaceOnUse;
-            _clipPathUnits = SvgUnitType.UserSpaceOnUse;
+            _maskUnits        = SvgUnitType.UserSpaceOnUse;
+            _clipPathUnits    = SvgUnitType.UserSpaceOnUse;
             _maskContentUnits = SvgUnitType.UserSpaceOnUse;
         }
 
@@ -157,46 +157,50 @@ namespace SharpVectors.Renderers.Wpf
                 return null;
             }
 
+            SvgElement svgElement = (SvgElement)element;
+
             SvgRenderingHint hint = element.RenderingHint;
             // For the shapes and text contents...
             if (hint == SvgRenderingHint.Shape)
             {
-                return new WpfPathRendering((SvgElement)element);
+                return new WpfPathRendering(svgElement);
             }
             if (hint == SvgRenderingHint.Text)
             {
-                return new WpfTextRendering((SvgElement)element);
+                return new WpfTextRendering(svgElement);
             }
 
             string localName = element.LocalName;
             if (string.IsNullOrWhiteSpace(localName))
             {
-                return new WpfRendering((SvgElement)element);
+                return new WpfRendering(svgElement);
             }
 
             switch (localName)
             {
                 case "svg":
-                    return new WpfSvgRendering((SvgElement)element);
+                    return new WpfSvgRendering(svgElement);
                 case "g":
-                    return new WpfGroupRendering((SvgElement)element);
+                    return new WpfGroupRendering(svgElement);
                 case "a":
-                    return new WpfARendering((SvgElement)element);
+                    return new WpfARendering(svgElement);
                 case "use":
-                    return new WpfUseRendering((SvgElement)element);
+                    return new WpfUseRendering(svgElement);
+                case "symbol":
+                    return new WpfSymbolRendering(svgElement);
                 case "switch":
-                    return new WpfSwitchRendering((SvgElement)element);
+                    return new WpfSwitchRendering(svgElement);
                 case "image":
-                    return new WpfImageRendering((SvgElement)element);
+                    return new WpfImageRendering(svgElement);
                 case "marker":
-                    return new WpfMarkerRendering((SvgElement)element);
+                    return new WpfMarkerRendering(svgElement);
             }
 
-            return new WpfRendering((SvgElement)element);
+            return new WpfRendering(svgElement);
         }
 
         /// <summary>
-        /// Generates a new <see cref="RenderingNode">RenderingNode</see> that
+        /// Generates a new <see cref="WpfRendering">RenderingNode</see> that
         /// corresponds to the given Uri.
         /// </summary>
         /// <param name="baseUri">
@@ -206,7 +210,7 @@ namespace SharpVectors.Renderers.Wpf
         /// The url.
         /// </param>
         /// <returns>
-        /// The generated <see cref="RenderingNode">RenderingNode</see> that
+        /// The generated <see cref="WpfRendering">RenderingNode</see> that
         /// corresponds to the given Uri.
         /// </returns>
         public static WpfRendering CreateByUri(SvgDocument document, string baseUri, string url)
@@ -284,7 +288,7 @@ namespace SharpVectors.Renderers.Wpf
 
                 string sOverflow = null;
 
-                if (overflow != null || overflow.CssText == "")
+                if (overflow != null && !string.IsNullOrWhiteSpace(overflow.CssText))
                 {
                     sOverflow = overflow.CssText;
                 }
@@ -477,7 +481,7 @@ namespace SharpVectors.Renderers.Wpf
                     context.FontFamilyVisitor, context.ImageVisitor);
 
                 renderer.RenderMask(maskElement, maskContext);
-                Drawing image = renderer.Drawing;
+                DrawingGroup maskDrawing = renderer.Drawing;
 
                 Rect bounds = new Rect(0, 0, 1, 1);
                 //Rect destRect = GetMaskDestRect(maskElement, bounds);
@@ -505,11 +509,11 @@ namespace SharpVectors.Renderers.Wpf
 
                 //this.Masking = imageBrush;
 
-                DrawingBrush maskBrush = new DrawingBrush(image);
+                DrawingBrush maskBrush = new DrawingBrush(maskDrawing);
                 //tb.Viewbox = new Rect(0, 0, destRect.Width, destRect.Height);
                 //tb.Viewport = new Rect(0, 0, destRect.Width, destRect.Height);
-                maskBrush.Viewbox = image.Bounds;
-                maskBrush.Viewport = image.Bounds;
+                maskBrush.Viewbox = maskDrawing.Bounds;
+                maskBrush.Viewport = maskDrawing.Bounds;
                 maskBrush.ViewboxUnits = BrushMappingMode.Absolute;
                 maskBrush.ViewportUnits = BrushMappingMode.Absolute;
                 maskBrush.TileMode = TileMode.None;
@@ -735,8 +739,9 @@ namespace SharpVectors.Renderers.Wpf
                     return;
                 }
 
-                _transformMatrix = new MatrixTransform(svgMatrix.A, svgMatrix.B, svgMatrix.C,
-                  svgMatrix.D, svgMatrix.E, svgMatrix.F);
+                _transformMatrix = new MatrixTransform(Math.Round(svgMatrix.A, 4), Math.Round(svgMatrix.B, 4),
+                    Math.Round(svgMatrix.C, 4), Math.Round(svgMatrix.D, 4), 
+                    Math.Round(svgMatrix.E, 4), Math.Round(svgMatrix.F, 4));
             }
         }
 
@@ -753,10 +758,10 @@ namespace SharpVectors.Renderers.Wpf
             double[] transformArray = spar.FitToViewBox((SvgRect)fitToView.ViewBox.AnimVal,
               new SvgRect(elementBounds.X, elementBounds.Y, elementBounds.Width, elementBounds.Height));
 
-            double translateX = transformArray[0];
-            double translateY = transformArray[1];
-            double scaleX = transformArray[2];
-            double scaleY = transformArray[3];
+            double translateX = Math.Round(transformArray[0], 4);
+            double translateY = Math.Round(transformArray[1], 4);
+            double scaleX     = Math.Round(transformArray[2], 4);
+            double scaleY     = Math.Round(transformArray[3], 4);
 
             Transform translateMatrix = null;
             Transform scaleMatrix = null;
@@ -817,13 +822,15 @@ namespace SharpVectors.Renderers.Wpf
 
             SvgPreserveAspectRatio spar = (SvgPreserveAspectRatio)fitToView.PreserveAspectRatio.AnimVal;
 
-            double[] transformArray = spar.FitToViewBox((SvgRect)fitToView.ViewBox.AnimVal,
-              new SvgRect(elementBounds.X, elementBounds.Y, elementBounds.Width, elementBounds.Height));
+            SvgRect viewBox   = (SvgRect)fitToView.ViewBox.AnimVal;
+            SvgRect rectToFit = new SvgRect(elementBounds.X, elementBounds.Y, elementBounds.Width, elementBounds.Height);
 
-            double translateX = transformArray[0];
-            double translateY = transformArray[1];
-            double scaleX = transformArray[2];
-            double scaleY = transformArray[3];
+            double[] transformArray = spar.FitToViewBox(viewBox, rectToFit);
+
+            double translateX = Math.Round(transformArray[0], 4);
+            double translateY = Math.Round(transformArray[1], 4);
+            double scaleX     = Math.Round(transformArray[2], 4);
+            double scaleY     = Math.Round(transformArray[3], 4);
 
             Transform translateMatrix = null;
             Transform scaleMatrix = null;
@@ -868,6 +875,25 @@ namespace SharpVectors.Renderers.Wpf
             {
                 this.Transform = scaleMatrix;
             }
+        }
+
+        protected double CalcLengthUnit(SvgLength length, SvgLengthDirection dir, Rect bounds)
+        {            
+            double calcValue = length.ValueInSpecifiedUnits;
+            if (dir == SvgLengthDirection.Horizontal)
+            {
+                calcValue *= bounds.Width;
+            }
+            else
+            {
+                calcValue *= bounds.Height;
+            }
+            if (length.UnitType == SvgLengthType.Percentage)
+            {
+                calcValue /= 100F;
+            }
+
+            return calcValue;
         }
 
         #endregion
@@ -1035,389 +1061,6 @@ namespace SharpVectors.Renderers.Wpf
 
         #endregion
 
-        #region Geometry Methods
-
-        public static Geometry CreateGeometry(ISvgElement element, bool optimizePath)
-        {
-            if (element == null || element.RenderingHint != SvgRenderingHint.Shape)
-            {
-                return null;
-            }
-
-            string localName = element.LocalName;
-            switch (localName)
-            {
-                case "ellipse":
-                    return CreateGeometry((SvgEllipseElement)element);
-                case "rect":
-                    return CreateGeometry((SvgRectElement)element);
-                case "line":
-                    return CreateGeometry((SvgLineElement)element);
-                case "path":
-                    if (optimizePath)
-                    {
-                        return CreateGeometryEx((SvgPathElement)element);
-                    }
-                    else
-                    {
-                        return CreateGeometry((SvgPathElement)element);
-                    }
-                case "circle":
-                    return CreateGeometry((SvgCircleElement)element);
-                case "polyline":
-                    return CreateGeometry((SvgPolylineElement)element);
-                case "polygon":
-                    return CreateGeometry((SvgPolygonElement)element);
-            }
-
-            return null;
-        }
-
-        #region SvgEllipseElement Geometry
-
-        public static Geometry CreateGeometry(SvgEllipseElement element)
-        {
-            double _cx = Math.Round(element.Cx.AnimVal.Value, 4);
-            double _cy = Math.Round(element.Cy.AnimVal.Value, 4);
-            double _rx = Math.Round(element.Rx.AnimVal.Value, 4);
-            double _ry = Math.Round(element.Ry.AnimVal.Value, 4);
-
-            if (_rx <= 0 || _ry <= 0)
-            {
-                return null;
-            }
-
-            /*if (_cx <= 1 && _cy <= 1 && _rx <= 1 && _ry <= 1)
-            {
-                gp.AddEllipse(_cx-_rx, _cy-_ry, _rx*2, _ry*2);
-            }
-            else
-            {
-                gp.AddEllipse(_cx-_rx, _cy-_ry, _rx*2 - 1, _ry*2 - 1);
-            }*/
-            //gp.AddEllipse(_cx - _rx, _cy - _ry, _rx * 2, _ry * 2);
-
-            EllipseGeometry geometry = new EllipseGeometry(new Point(_cx, _cy),
-                _rx, _ry);
-
-            return geometry;
-        }
-
-        #endregion
-
-        #region SvgRectElement Geometry
-
-        public static Geometry CreateGeometry(SvgRectElement element)
-        {
-            double dx = Math.Round(element.X.AnimVal.Value, 4);
-            double dy = Math.Round(element.Y.AnimVal.Value, 4);
-            double width = Math.Round(element.Width.AnimVal.Value, 4);
-            double height = Math.Round(element.Height.AnimVal.Value, 4);
-            double rx = Math.Round(element.Rx.AnimVal.Value, 4);
-            double ry = Math.Round(element.Ry.AnimVal.Value, 4);
-
-            if (width <= 0 || height <= 0)
-            {
-                return null;
-            }
-            if (rx <= 0 && ry > 0)
-            {
-                rx = ry;
-            }
-            else if (rx > 0 && ry <= 0)
-            {
-                ry = rx;
-            }
-
-            return new RectangleGeometry(new Rect(dx, dy, width, height), rx, ry);
-        }
-
-        #endregion
-
-        #region SvgLineElement Geometry
-
-        public static Geometry CreateGeometry(SvgLineElement element)
-        {
-            return new LineGeometry(new Point(Math.Round(element.X1.AnimVal.Value, 4),
-                Math.Round(element.Y1.AnimVal.Value, 4)),
-                new Point(Math.Round(element.X2.AnimVal.Value, 4), Math.Round(element.Y2.AnimVal.Value, 4)));
-        }
-
-        #endregion
-
-        #region SvgPathElement Geometry
-
-        public static Geometry CreateGeometryEx(SvgPathElement element)
-        {
-            PathGeometry geometry = new PathGeometry();
-
-            string pathScript = element.PathScript;
-            if (string.IsNullOrWhiteSpace(pathScript))
-            {
-                return geometry;
-            }
-
-            string fillRule = element.GetPropertyValue("fill-rule");
-            string clipRule = element.GetAttribute("clip-rule");
-            if (!string.IsNullOrWhiteSpace(clipRule) &&
-                string.Equals(clipRule, "evenodd") || string.Equals(clipRule, "nonzero"))
-            {
-                fillRule = clipRule;
-            }
-            if (fillRule == "evenodd")
-                geometry.FillRule = FillRule.EvenOdd;
-            else if (fillRule == "nonzero")
-                geometry.FillRule = FillRule.Nonzero;
-
-            try
-            {
-                geometry.Figures = PathFigureCollection.Parse(pathScript);
-            }
-            catch
-            {
-            }
-
-            return geometry;
-        }
-
-        public static Geometry CreateGeometry(SvgPathElement element)
-        {
-            PathGeometry geometry = new PathGeometry();
-
-            string fillRule = element.GetPropertyValue("fill-rule");
-            string clipRule = element.GetAttribute("clip-rule");
-            if (!string.IsNullOrWhiteSpace(clipRule) &&
-                string.Equals(clipRule, "evenodd") || string.Equals(clipRule, "nonzero"))
-            {
-                fillRule = clipRule;
-            }
-            if (fillRule == "evenodd")
-                geometry.FillRule = FillRule.EvenOdd;
-            else if (fillRule == "nonzero")
-                geometry.FillRule = FillRule.Nonzero;
-
-            SvgPointF initPoint = new SvgPointF(0, 0);
-            SvgPointF lastPoint = new SvgPointF(0, 0);
-
-            ISvgPathSeg segment = null;
-            SvgPathSegMoveto pathMoveTo = null;
-            SvgPathSegLineto pathLineTo = null;
-            SvgPathSegCurveto pathCurveTo = null;
-            SvgPathSegArc pathArc = null;
-
-            ISvgPathSegList segments = element.PathSegList;
-            int nElems = segments.NumberOfItems;
-
-            PathFigure pathFigure = null;
-
-            for (int i = 0; i < nElems; i++)
-            {
-                segment = segments.GetItem(i);
-
-                if (DynamicCast.Cast(segment, out pathMoveTo))
-                {
-                    if (pathFigure != null)
-                    {
-                        pathFigure.IsClosed = false;
-                        pathFigure.IsFilled = true;
-                        geometry.Figures.Add(pathFigure);
-                        pathFigure = null;
-                    }
-
-                    lastPoint = initPoint = pathMoveTo.AbsXY;
-
-                    pathFigure = new PathFigure();
-                    pathFigure.StartPoint = new Point(initPoint.ValueX, initPoint.ValueY);
-                }
-                else if (DynamicCast.Cast(segment, out pathLineTo))
-                {
-                    SvgPointF p = pathLineTo.AbsXY;
-                    pathFigure.Segments.Add(new LineSegment(new Point(p.ValueX, p.ValueY), true));
-
-                    lastPoint = p;
-                }
-                else if (DynamicCast.Cast(segment, out pathCurveTo))
-                {
-                    SvgPointF xy = pathCurveTo.AbsXY;
-                    SvgPointF x1y1 = pathCurveTo.CubicX1Y1;
-                    SvgPointF x2y2 = pathCurveTo.CubicX2Y2;
-                    pathFigure.Segments.Add(new BezierSegment(new Point(x1y1.ValueX, x1y1.ValueY),
-                        new Point(x2y2.ValueX, x2y2.ValueY), new Point(xy.ValueX, xy.ValueY), true));
-
-                    lastPoint = xy;
-                }
-                else if (DynamicCast.Cast(segment, out pathArc))
-                {
-                    SvgPointF p = pathArc.AbsXY;
-                    if (lastPoint.Equals(p))
-                    {
-                        // If the endpoints (x, y) and (x0, y0) are identical, then this
-                        // is equivalent to omitting the elliptical arc segment entirely.
-                    }
-                    else if (pathArc.R1 == 0 || pathArc.R2 == 0)
-                    {
-                        // Ensure radii are valid
-                        pathFigure.Segments.Add(new LineSegment(new Point(p.ValueX, p.ValueY), true));
-                    }
-                    else
-                    {
-                        CalculatedArcValues calcValues = pathArc.GetCalculatedArcValues();
-
-                        pathFigure.Segments.Add(new ArcSegment(new Point(p.ValueX, p.ValueY),
-                            new Size(pathArc.R1, pathArc.R2), pathArc.Angle, pathArc.LargeArcFlag,
-                            pathArc.SweepFlag ? SweepDirection.Clockwise : SweepDirection.Counterclockwise,
-                            true));
-                    }
-
-                    lastPoint = p;
-                }
-                else if (segment is SvgPathSegClosePath)
-                {
-                    if (pathFigure != null)
-                    {
-                        pathFigure.IsClosed = true;
-                        pathFigure.IsFilled = true;
-                        geometry.Figures.Add(pathFigure);
-                        pathFigure = null;
-                    }
-
-                    lastPoint = initPoint;
-                }
-            }
-
-            if (pathFigure != null)
-            {
-                pathFigure.IsClosed = false;
-                pathFigure.IsFilled = true;
-                geometry.Figures.Add(pathFigure);
-            }
-
-            return geometry;
-        }
-
-        #endregion
-
-        #region SvgCircleElement Geometry
-
-        public static Geometry CreateGeometry(SvgCircleElement element)
-        {
-            double _cx = Math.Round(element.Cx.AnimVal.Value, 4);
-            double _cy = Math.Round(element.Cy.AnimVal.Value, 4);
-            double _r = Math.Round(element.R.AnimVal.Value, 4);
-
-            if (_r <= 0)
-            {
-                return null;
-            }
-
-            EllipseGeometry geometry = new EllipseGeometry(new Point(_cx, _cy), _r, _r);
-
-            return geometry;
-        }
-
-        #endregion
-
-        #region SvgPolylineElement Geometry
-
-        public static Geometry CreateGeometry(SvgPolylineElement element)
-        {
-            ISvgPointList list = element.AnimatedPoints;
-            ulong nElems = list.NumberOfItems;
-            if (nElems == 0)
-            {
-                return null;
-            }
-
-            PointCollection points = new PointCollection((int)nElems);
-
-            for (uint i = 0; i < nElems; i++)
-            {
-                ISvgPoint point = list.GetItem(i);
-                points.Add(new Point(Math.Round(point.X, 4), Math.Round(point.Y, 4)));
-            }
-            PolyLineSegment polyline = new PolyLineSegment();
-            polyline.Points = points;
-
-            PathFigure polylineFigure = new PathFigure();
-            polylineFigure.StartPoint = points[0];
-            polylineFigure.IsClosed = false;
-            polylineFigure.IsFilled = true;
-
-            polylineFigure.Segments.Add(polyline);
-
-            PathGeometry geometry = new PathGeometry();
-
-            string fillRule = element.GetPropertyValue("fill-rule");
-            string clipRule = element.GetAttribute("clip-rule");
-            if (!string.IsNullOrWhiteSpace(clipRule) &&
-                string.Equals(clipRule, "evenodd") || string.Equals(clipRule, "nonzero"))
-            {
-                fillRule = clipRule;
-            }
-            if (fillRule == "evenodd")
-                geometry.FillRule = FillRule.EvenOdd;
-            else if (fillRule == "nonzero")
-                geometry.FillRule = FillRule.Nonzero;
-
-            geometry.Figures.Add(polylineFigure);
-
-            return geometry;
-        }
-
-        #endregion
-
-        #region SvgPolygonElement Geometry
-
-        public static Geometry CreateGeometry(SvgPolygonElement element)
-        {
-            ISvgPointList list = element.AnimatedPoints;
-            ulong nElems = list.NumberOfItems;
-            if (nElems == 0)
-            {
-                return null;
-            }
-
-            PointCollection points = new PointCollection((int)nElems);
-
-            for (uint i = 0; i < nElems; i++)
-            {
-                ISvgPoint point = list.GetItem(i);
-                points.Add(new Point(Math.Round(point.X, 4), Math.Round(point.Y, 4)));
-            }
-
-            PolyLineSegment polyline = new PolyLineSegment();
-            polyline.Points = points;
-
-            PathFigure polylineFigure = new PathFigure();
-            polylineFigure.StartPoint = points[0];
-            polylineFigure.IsClosed = true;
-            polylineFigure.IsFilled = true;
-
-            polylineFigure.Segments.Add(polyline);
-
-            PathGeometry geometry = new PathGeometry();
-
-            string fillRule = element.GetPropertyValue("fill-rule");
-            string clipRule = element.GetAttribute("clip-rule");
-            if (!string.IsNullOrWhiteSpace(clipRule) &&
-                string.Equals(clipRule, "evenodd") || string.Equals(clipRule, "nonzero"))
-            {
-                fillRule = clipRule;
-            }
-            if (fillRule == "evenodd")
-                geometry.FillRule = FillRule.EvenOdd;
-            else if (fillRule == "nonzero")
-                geometry.FillRule = FillRule.Nonzero;
-
-            geometry.Figures.Add(polylineFigure);
-
-            return geometry;
-        }
-
-        #endregion
-
-        #endregion
-
         #region Marker Methods
 
         protected static string ExtractMarkerUrl(string propValue)
@@ -1440,7 +1083,12 @@ namespace SharpVectors.Renderers.Wpf
                 string markerMiddleUrl = ExtractMarkerUrl(styleElm.GetPropertyValue("marker-mid", "marker"));
                 string markerEndUrl    = ExtractMarkerUrl(styleElm.GetPropertyValue("marker-end", "marker"));
                 string markerAll       = ExtractMarkerUrl(styleElm.GetPropertyValue("marker", "marker"));
-                if (!string.IsNullOrWhiteSpace(markerAll))
+
+                //  The SVG specification defines three properties to reference markers: marker-start, 
+                // marker -mid, marker-end. It also provides a shorthand property,marker. Using the marker 
+                // property from a style sheet is equivalent to using all three (start, mid, end). 
+                // However, shorthand properties cannot be used as presentation attributes.
+                if (!string.IsNullOrWhiteSpace(markerAll) && !IsPresentationMarker(styleElm))
                 {
                     if (string.IsNullOrWhiteSpace(markerStartUrl))
                     {
@@ -1488,6 +1136,36 @@ namespace SharpVectors.Renderers.Wpf
                     }
                 }
             }
+        }
+
+        protected static bool IsPresentationMarker(SvgStyleableElement styleElm)
+        {
+            if (!string.IsNullOrWhiteSpace(styleElm.GetAttribute("marker")))
+            {
+                return true;
+            }
+            SvgElement parentElm = styleElm.ParentNode as SvgElement;
+            if (parentElm == null)
+            {
+                return false;
+            }
+            switch (parentElm.LocalName)
+            {
+                case "g":
+                    if (!string.IsNullOrWhiteSpace(parentElm.GetAttribute("marker")))
+                    {
+                        return true;
+                    }
+                    break;
+                case "use":
+                    if (!string.IsNullOrWhiteSpace(parentElm.GetAttribute("marker")))
+                    {
+                        return true;
+                    }
+                    //TODO--PAUL
+                    break;
+            }
+            return false;
         }
 
         #endregion

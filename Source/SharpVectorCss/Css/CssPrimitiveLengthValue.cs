@@ -8,33 +8,38 @@ namespace SharpVectors.Dom.Css
 	{
         #region Protected Fields
 
-        //protected const double Dpi = 96;
-        protected const double Dpi = 90; // The common default value for this is 90, not 96
+        protected const double Dpi = 96;
+        //protected const double Dpi     = 90; // The common default value for this is 90, not 96
         protected const double CmPerIn = 2.54;
 
         #endregion
 
         #region Constructors
-        public CssPrimitiveLengthValue(string number, string unit, bool readOnly) : base(number+unit, readOnly)
+
+        public CssPrimitiveLengthValue(string number, string unit, bool readOnly) 
+            : base(number+unit, readOnly)
 		{
-			_setType(unit);
+			SetUnitType(unit);
 			SetFloatValue(number);
 		}
 
-		public CssPrimitiveLengthValue(string cssText, bool readOnly) : base(cssText, readOnly)
+		public CssPrimitiveLengthValue(string cssText, bool readOnly) 
+            : base(cssText, readOnly)
 		{
-			OnSetCssText(cssText);
+            SetCssText(cssText);
 		}
 
-		public CssPrimitiveLengthValue(double number, string unit, bool readOnly) : base(number+unit, readOnly)
+		public CssPrimitiveLengthValue(double number, string unit, bool readOnly) 
+            : base(number+unit, readOnly)
 		{
-			_setType(unit);
+			SetUnitType(unit);
 			SetFloatValue(number);
 		}
 
-		protected CssPrimitiveLengthValue() : base()
+		protected CssPrimitiveLengthValue()
 		{
 		}
+
         #endregion
 
         #region Public Properties
@@ -58,7 +63,7 @@ namespace SharpVectors.Dom.Css
         public override double GetFloatValue(CssPrimitiveType unitType)
         {
             double ret = double.NaN;
-            switch (PrimitiveType)
+            switch (this.PrimitiveType)
             {
                 case CssPrimitiveType.Number:
                 case CssPrimitiveType.Px:
@@ -67,13 +72,30 @@ namespace SharpVectors.Dom.Css
                 case CssPrimitiveType.In:
                 case CssPrimitiveType.Pt:
                 case CssPrimitiveType.Pc:
-                    if (unitType == CssPrimitiveType.Px) ret = _getPxLength();
-                    else if (unitType == CssPrimitiveType.Number) ret = _getPxLength();
-                    else if (unitType == CssPrimitiveType.In) ret = _getInLength();
-                    else if (unitType == CssPrimitiveType.Cm) ret = _getInLength() * CmPerIn;
-                    else if (unitType == CssPrimitiveType.Mm) ret = _getInLength() * CmPerIn * 10;
-                    else if (unitType == CssPrimitiveType.Pt) ret = _getInLength() * 72;
-                    else if (unitType == CssPrimitiveType.Pc) ret = _getInLength() * 6;
+                    switch (unitType)
+                    {
+                        case CssPrimitiveType.Px:
+                            ret = GetPxLength();
+                            break;
+                        case CssPrimitiveType.Number:
+                            ret = GetPxLength();
+                            break;
+                        case CssPrimitiveType.In:
+                            ret = GetInchLength();
+                            break;
+                        case CssPrimitiveType.Cm:
+                            ret = GetInchLength() * CmPerIn;
+                            break;
+                        case CssPrimitiveType.Mm:
+                            ret = GetInchLength() * CmPerIn * 10;
+                            break;
+                        case CssPrimitiveType.Pt:
+                            ret = GetInchLength() * 72;
+                            break;
+                        case CssPrimitiveType.Pc:
+                            ret = GetInchLength() * 6;
+                            break;
+                    }
                     break;
                 case CssPrimitiveType.Percentage:
                     if (unitType == CssPrimitiveType.Percentage) ret = floatValue;
@@ -98,11 +120,20 @@ namespace SharpVectors.Dom.Css
 
         protected override void OnSetCssText(string cssText)
         {
+            SetCssText(cssText);
+        }
+
+        #endregion
+
+        #region Private Methods
+
+        private void SetCssText(string cssText)
+        {
             Regex re = new Regex(CssValue.LengthPattern);
             Match match = re.Match(cssText);
             if (match.Success)
             {
-                _setType(match.Groups["lengthUnit"].Value);
+                SetUnitType(match.Groups["lengthUnit"].Value);
                 SetFloatValue(match.Groups["lengthNumber"].Value);
             }
             else
@@ -111,11 +142,7 @@ namespace SharpVectors.Dom.Css
             }
         }
 
-        #endregion
-
-        #region Private Methods
-
-        private void _setType(string unit)
+        private void SetUnitType(string unit)
         {
             switch (unit)
             {
@@ -155,7 +182,7 @@ namespace SharpVectors.Dom.Css
         }
 
         // only for absolute values
-        private double _getPxLength()
+        private double GetPxLength()
         {
             switch (PrimitiveType)
             {
@@ -174,9 +201,9 @@ namespace SharpVectors.Dom.Css
             }
         }
 
-        private double _getInLength()
+        private double GetInchLength()
         {
-            return _getPxLength() / Dpi;
+            return GetPxLength() / Dpi;
         }
 
         #endregion

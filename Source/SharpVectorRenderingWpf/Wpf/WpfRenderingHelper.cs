@@ -8,14 +8,25 @@ using SharpVectors.Dom.Svg;
 
 namespace SharpVectors.Renderers.Wpf
 {
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <remarks>
+    /// Rename: WpfDocumentRenderer
+    /// </remarks>
     public sealed class WpfRenderingHelper : DependencyObject
     {
         #region Private Fields
 
         private string _currentLang;
         private string _currentLangName;
+
         private WpfDrawingRenderer _renderer;
+
         private IDictionary<ISvgElement, WpfRenderingBase> _rendererMap;
+
+        // A simple way to prevent use element circular references.
+        private ISet<int> _useElements;
 
         #endregion
 
@@ -29,7 +40,8 @@ namespace SharpVectors.Renderers.Wpf
             _currentLangName = cultureInfo.Name;
             _renderer        = renderer;
             _rendererMap     = new Dictionary<ISvgElement, WpfRenderingBase>();
-        }
+            _useElements     = new HashSet<int>();
+       }
 
         #endregion
 
@@ -116,10 +128,46 @@ namespace SharpVectors.Renderers.Wpf
 
         #region Private Methods
 
+        private bool BeginUseElement(SvgUseElement element)
+        {
+            int hashCode = element.OuterXml.GetHashCode();
+            if (_useElements.Contains(hashCode))
+            {
+                return false;
+            }
+
+            _useElements.Add(hashCode);
+
+            return true;
+        } 
+
+        private bool BeginUseElement(int hashCode)
+        {
+            if (_useElements.Contains(hashCode))
+            {
+                return false;
+            }
+
+            _useElements.Add(hashCode);
+
+            return true;
+        } 
+
+        private bool EndUseElement(SvgUseElement element)
+        {
+            int hashCode = element.OuterXml.GetHashCode();
+
+            return _useElements.Remove(hashCode);
+        } 
+
+        private bool EndUseElement(int hashCode)
+        {
+            return _useElements.Remove(hashCode);
+        } 
+
         private void RenderElement(ISvgElement svgElement)
         {
             bool isNotRenderable = !svgElement.IsRenderable;
-            //bool isNotRenderable = !svgElement.IsRenderable || string.Equals(svgElement.LocalName, "a");
 
             if (string.Equals(svgElement.LocalName, "a"))
             {   
@@ -165,12 +213,22 @@ namespace SharpVectors.Renderers.Wpf
         {
             SvgUseElement useElement = (SvgUseElement)svgElement;
 
+            int hashCode = useElement.OuterXml.GetHashCode();
+
+            if (!this.BeginUseElement(hashCode))
+            {
+                return;
+            }
+
             SvgDocument document = useElement.OwnerDocument;
 
             XmlElement refEl = useElement.ReferencedElement;
             if (refEl == null)
+            {
+                this.EndUseElement(hashCode);
                 return;
-            bool isImported = false;
+            }
+
             // For the external node, the documents are different, and we may not be
             // able to insert this node, so we first import it...
             if (useElement.OwnerDocument != refEl.OwnerDocument)
@@ -188,16 +246,18 @@ namespace SharpVectors.Renderers.Wpf
                     }
 
                     refEl = importedNode;
-                    isImported = true;
                 }
             }
-            XmlElement refElParent = (XmlElement)refEl.ParentNode;
+            else
+            {
+                // For elements/nodes within the same document, clone it.
+                refEl = (XmlElement)refEl.CloneNode(true);
+            }
+            // Reset any ID on the cloned/copied element to avoid duplication of IDs.
+ //           refEl.SetAttribute("id", "");
+
             useElement.OwnerDocument.Static = true;
             useElement.CopyToReferencedElement(refEl);
-            if (!isImported) // if imported, we do not need to remove it...
-            {   
-                refElParent.RemoveChild(refEl);
-            }
             useElement.AppendChild(refEl);
 
             // Now, render the use element...
@@ -205,11 +265,8 @@ namespace SharpVectors.Renderers.Wpf
 
             useElement.RemoveChild(refEl);
             useElement.RestoreReferencedElement(refEl);
-            if (!isImported) 
-            {
-                refElParent.AppendChild(refEl);
-            }
-            useElement.OwnerDocument.Static = false;
+
+            this.EndUseElement(hashCode);
         }
 
         private void RenderElementChildren(ISvgElement svgElement)

@@ -146,7 +146,7 @@ namespace SharpVectors.Renderers.Wpf
             string elementId = this.GetElementName();
             if (!string.IsNullOrWhiteSpace(elementId) && !context.IsRegisteredId(elementId))
             {
-                _drawGroup.SetValue(FrameworkElement.NameProperty, elementId);
+                SvgObject.SetName(_drawGroup, elementId);
 
                 context.RegisterId(elementId);
 
@@ -154,6 +154,12 @@ namespace SharpVectors.Renderers.Wpf
                 {
                     SvgObject.SetId(_drawGroup, elementId);
                 }
+            }
+
+            string elementClass = this.GetElementClass();
+            if (!string.IsNullOrWhiteSpace(elementClass) && context.IncludeRuntime)
+            {
+                SvgObject.SetClass(_drawGroup, elementClass);
             }
 
             Transform textTransform = this.Transform;

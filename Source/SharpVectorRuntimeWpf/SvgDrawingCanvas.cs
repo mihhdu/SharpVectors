@@ -4,8 +4,6 @@ using System.IO.Compression;
 using System.Xml;
 using System.Collections.Generic;
 
-using IoPath = System.IO.Path;
-
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -13,6 +11,8 @@ using System.Windows.Markup;
 using System.Windows.Shapes;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
+
+using IoPath = System.IO.Path;
 
 using SharpVectors.Runtime.Utils;
 
@@ -130,6 +130,20 @@ namespace SharpVectors.Runtime
             get
             {
                 return _displayTransform;
+            }
+        }
+
+        public IList<Drawing> DrawObjects
+        {
+            get {
+                return _drawObjects;
+            }
+        }
+
+        public IList<Drawing> LinkObjects
+        {
+            get {
+                return _linkObjects;
             }
         }
 
@@ -270,7 +284,7 @@ namespace SharpVectors.Runtime
             for (int i = 0; i < drawings.Count; i++)
             {
                 Drawing drawing = drawings[i];
-                //string drawingName = drawing.GetValue(FrameworkElement.NameProperty) as string;
+                //string drawingName = SvgObject.GetName(drawing);
                 string drawingName = SvgLink.GetKey(drawing);
                 if (!string.IsNullOrWhiteSpace(drawingName) &&
                     string.Equals(drawingName, SvgObject.DrawLayer))
@@ -412,7 +426,7 @@ namespace SharpVectors.Runtime
                 return;
             }
 
-            string itemName = visual.GetValue(FrameworkElement.NameProperty) as string;
+            string itemName = SvgObject.GetName(visual);
             if (itemName == null)
             {
                 if (_tooltip != null)
@@ -441,7 +455,7 @@ namespace SharpVectors.Runtime
 
             //if (e.ChangedButton == MouseButton.Left)
             //{
-            //    string brushName = brush.GetValue(FrameworkElement.NameProperty) as string;
+            //    string brushName = SvgObject.GetName(visual);
             //    if (!string.IsNullOrWhiteSpace(brushName))
             //    {
             //        SvgLinkAction linkAction = SvgLink.GetLinkAction(visual);
@@ -480,7 +494,7 @@ namespace SharpVectors.Runtime
 
                 if (_hitVisual != null)
                 {
-                    //itemName = _hitVisual.GetValue(FrameworkElement.NameProperty) as string;
+                    //itemName = SvgObject.GetName(_hitVisual);
                     //if (itemName == null)
                     //{
                     //    _hitVisual = null;
@@ -513,7 +527,7 @@ namespace SharpVectors.Runtime
 
                 if (_hitVisual != null)
                 {
-                    //itemName = _hitVisual.GetValue(FrameworkElement.NameProperty) as string;
+                    //itemName = SvgObject.GetName(_hitVisual);
                     //if (itemName == null)
                     //{
                     //    _hitVisual = null;
@@ -527,7 +541,7 @@ namespace SharpVectors.Runtime
                     _hitVisual = null;
                 }
 
-                //itemName = hitVisual.GetValue(FrameworkElement.NameProperty) as string;
+                //itemName = SvgObject.GetName(hitVisual);
                 //if (itemName == null)
                 //{
                 //    return;
@@ -581,7 +595,7 @@ namespace SharpVectors.Runtime
         {
             base.OnMouseLeave(e);
 
-            if (_animationCanvas != null && _animationCanvas.HandleMouseLeave(e))
+            if (_animationCanvas != null && _animationCanvas.HandleMouseLeave())
             {
                 return;
             }
@@ -597,7 +611,7 @@ namespace SharpVectors.Runtime
                 return;
             }
 
-            string itemName = _hitVisual.GetValue(FrameworkElement.NameProperty) as string;
+            string itemName = SvgObject.GetName(_hitVisual);
             if (itemName == null)
             {
                 _hitVisual = null;

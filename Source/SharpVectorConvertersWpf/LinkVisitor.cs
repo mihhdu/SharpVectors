@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Xml;
-using System.Text;
 using System.Collections.Generic;
 
-using System.Windows;
 using System.Windows.Media;
 
 using SharpVectors.Dom.Svg;
@@ -145,11 +143,11 @@ namespace SharpVectors.Converters
 
             if (!string.IsNullOrWhiteSpace(linkAction))
             {   
-                if (linkAction.IndexOf("'Top'") > 0)
+                if (linkAction.IndexOf("'Top'", StringComparison.OrdinalIgnoreCase) > 0)
                 {
                     SvgLink.SetLocation(group, "Top");
                 }
-                else if (linkAction.IndexOf("'Bottom'") > 0)
+                else if (linkAction.IndexOf("'Bottom'", StringComparison.OrdinalIgnoreCase) > 0)
                 {
                     SvgLink.SetLocation(group, "Bottom");
                 }
@@ -183,7 +181,7 @@ namespace SharpVectors.Converters
                 WpfSvgPaint fillPaint = new WpfSvgPaint(context, _aggregatedFill, "fill");
                 Brush brush = fillPaint.GetBrush(false);
 
-                brush.SetValue(FrameworkElement.NameProperty, linkId + "_Brush");
+                SvgObject.SetName(brush, linkId + "_Brush");
 
                 GeometryDrawing drawing = new GeometryDrawing(brush, null, drawGeometry);
 
@@ -276,7 +274,7 @@ namespace SharpVectors.Converters
             // Check if the children of the link are wrapped in a Group Element...
             if (aElement.ChildNodes.Count == 1)
             {
-                SvgGElement groupElement = aElement.ChildNodes[0] as SvgGElement;
+                var groupElement = aElement.ChildNodes[0] as SvgGElement;
                 if (groupElement != null)
                 {
                     targetNode = groupElement;
@@ -315,11 +313,10 @@ namespace SharpVectors.Converters
                                 continue;
                             }
 
-                            SvgStyleableElement element = useChild as SvgStyleableElement;
+                            var element = useChild as SvgStyleableElement;
                             if (element != null && element.RenderingHint == SvgRenderingHint.Shape)
                             {
-                                Geometry childPath = WpfRendering.CreateGeometry(element, 
-                                    settings.OptimizePath);
+                                Geometry childPath = CreateGeometry(element, settings.OptimizePath);
 
                                 if (childPath != null)
                                 {
@@ -358,11 +355,10 @@ namespace SharpVectors.Converters
                 //}
                 else
                 {
-                    SvgStyleableElement element = node as SvgStyleableElement;
+                    var element = node as SvgStyleableElement;
                     if (element != null && element.RenderingHint == SvgRenderingHint.Shape)
                     {
-                        Geometry childPath = WpfRendering.CreateGeometry(element, 
-                            settings.OptimizePath);
+                        Geometry childPath = CreateGeometry(element, settings.OptimizePath);
 
                         if (childPath != null)
                         {

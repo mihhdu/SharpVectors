@@ -1,15 +1,11 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Windows;
-using System.Windows.Media;
 using System.Windows.Markup;
 using System.Windows.Controls;
-using System.Collections.Generic;
 
 namespace SharpVectors.Runtime
 {
-    //This class, if placed at the root of a XAML file which is loaded by XamlReader.Load()
-    //will end up having all named elements contained in its nameTable automatically...
-    //
     /// <summary>
     /// This class, if placed at the root of a XAML file which is loaded by XamlReader.Load()
     /// will end up having all named elements contained in its nameTable automatically.
@@ -54,7 +50,7 @@ namespace SharpVectors.Runtime
 
             if (namedObject != null)
             {   
-                namedObject.SetValue(FrameworkElement.NameProperty, name);
+                SvgObject.SetName(namedObject, name);
             }
         }
 
